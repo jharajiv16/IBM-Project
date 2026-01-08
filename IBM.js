@@ -112,7 +112,7 @@ function isAdmin() {
 function updateUI() {
     const input = document.getElementById("noticeInput");
     const addBtn = document.getElementById("addBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
+    const logoutBtn = document.getElementById("logoutBtn");no
 
     if (isAdmin()) {
         input.disabled = false;
