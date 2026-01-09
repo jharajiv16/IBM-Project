@@ -3,7 +3,7 @@
     box-sizing: border-box;
 }
 
-/* HTML & BODY */
+/* FULLSCREEN SETUP */
 html, body {
     width: 100%;
     height: 100%;
@@ -11,7 +11,7 @@ html, body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* ANIMATED BACKGROUND */
+/* BACKGROUND ANIMATION */
 html {
     background-color: hsla(200,40%,30%,.4);
     background-image:   
@@ -39,7 +39,7 @@ html {
     }
 }
 
-/* CENTER CONTENT */
+/* CENTERING */
 body {
     display: flex;
     justify-content: center;
