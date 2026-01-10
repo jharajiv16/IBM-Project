@@ -1,132 +1,177 @@
-const board = document.getElementById("noticeBoard");
+const ADMIN_PASSWORD = "admin123";
+let isAdminAuthenticated = false;
+let deleteId = null;
 
-const colors = [
-    "paper-yellow",
-    "paper-pink",
-    "paper-blue",
-    "paper-green",
-    "paper-purple"
+let notices = JSON.parse(localStorage.getItem("secure_notices_db")) || [
+    {
+        id: 1,
+        title: "Welcome to Digital Notice Board",
+        content: "You can filter notices, search them or login as admin to manage content.",
+        category: "general",
+        timestamp: "Jan 09, 11:00 PM"
+    }
 ];
 
-loadNotices();
+let currentMode = "user";
 
-function addNotice() {
-    if (!isAdmin()) {
-        alert("Only admin can add notices");
-        return;
-    }
-
-    const input = document.getElementById("noticeInput");
-    const text = input.value.trim();
-
-    if (text === "") {
-        alert("Please enter a notice");
-        return;
-    }
-
-    const notice = {
-        message: text,
-        time: new Date().toLocaleString(),
-        color: colors[Math.floor(Math.random() * colors.length)],
-        rotate: (Math.random() * 6 - 3).toFixed(1)
-    };
-
-    const notices = getNotices();
-    notices.push(notice);
-    localStorage.setItem("notices", JSON.stringify(notices));
-
-    input.value = "";
-    displayNotices();
+/* ---------- AUTH ---------- */
+function handleAdminNav() {
+    isAdminAuthenticated ? showView("admin") : openLogin();
 }
 
-function displayNotices() {
-    board.innerHTML = "";
-    const notices = getNotices();
-
-    notices.forEach((n, i) => {
-        const div = document.createElement("div");
-        div.className = `notice ${n.color}`;
-        div.style.setProperty("--rotate", `${n.rotate}deg`);
-
-        // Message
-        const p = document.createElement("p");
-        p.textContent = n.message;
-        div.appendChild(p);
-
-        // Time
-        const small = document.createElement("small");
-        small.textContent = n.time;
-        div.appendChild(small);
-
-        // Delete button
-        const del = document.createElement("button");
-        del.className = "delete";
-        del.title = "Delete notice";
-        del.textContent = "×";
-        del.addEventListener('click', () => deleteNotice(i));
-        div.appendChild(del);
-
-        board.appendChild(div);
-    });
+function openLogin() {
+    document.getElementById("loginModal").style.display = "flex";
+    document.getElementById("passwordInput").focus();
 }
 
-function deleteNotice(index) {
-    const notices = getNotices();
-    notices.splice(index, 1);
-    localStorage.setItem("notices", JSON.stringify(notices));
-    displayNotices();
+function closeLogin() {
+    document.getElementById("loginModal").style.display = "none";
+    document.getElementById("passwordInput").value = "";
 }
 
-function getNotices() {
-    return JSON.parse(localStorage.getItem("notices")) || [];
-}
-
-function loadNotices() {
-    displayNotices();
-}
-
-const ADMIN_PASSWORD = "teacher123";
-
-function adminLogin() {
-    const password = prompt("Enter Admin Password:");
-
-    if (password === ADMIN_PASSWORD) {
-        localStorage.setItem("isAdmin", "true");
-        alert("Admin access granted");
-        updateUI();
+function verifyPassword() {
+    const input = document.getElementById("passwordInput");
+    if (input.value === ADMIN_PASSWORD) {
+        isAdminAuthenticated = true;
+        closeLogin();
+        showView("admin");
+        showToast("🔓 Login Successful");
     } else {
-        alert("Incorrect password");
+        showToast("❌ Wrong Password");
     }
 }
 
-function adminLogout() {
-    localStorage.removeItem("isAdmin");
-    alert("Logged out");
-    updateUI();
+function logoutAdmin() {
+    isAdminAuthenticated = false;
+    showView("user");
+    showToast("🔒 Logged Out");
 }
 
-function isAdmin() {
-    return localStorage.getItem("isAdmin") === "true";
+/* ---------- VIEW ---------- */
+function showView(mode) {
+    currentMode = mode;
+    document.getElementById("userNavBtn").classList.toggle("active", mode === "user");
+    document.getElementById("adminNavBtn").classList.toggle("active", mode === "admin");
+    document.getElementById("adminPanel").style.display = mode === "admin" ? "block" : "none";
+    renderNotices();
 }
 
-function updateUI() {
-    const input = document.getElementById("noticeInput");
-    const addBtn = document.getElementById("addBtn");
-    const logoutBtn = document.getElementById("logoutBtn");no
+/* ---------- THEME ---------- */
+function toggleTheme() {
+    const body = document.body;
+    body.setAttribute(
+        "data-theme",
+        body.getAttribute("data-theme") === "light" ? "dark" : "light"
+    );
+}
 
-    if (isAdmin()) {
-        input.disabled = false;
-        input.placeholder = "Enter notice here";
-        addBtn.disabled = false;
-        logoutBtn.style.display = "inline-block";
+/* ---------- CRUD ---------- */
+function handleNoticeSubmit() {
+    if (!isAdminAuthenticated) return;
+
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
+    const category = categoryInput.value;
+    const editId = document.getElementById("editId").value;
+
+    if (!title || !content) return showToast("⚠️ Fill all fields");
+
+    if (editId) {
+        const i = notices.findIndex(n => n.id == editId);
+        notices[i] = { ...notices[i], title, content, category };
+        showToast("✅ Updated");
     } else {
-        input.disabled = true;
-        input.placeholder = "Admin only — please login";
-        addBtn.disabled = true;
-        logoutBtn.style.display = "none";
+        notices.unshift({
+            id: Date.now(),
+            title,
+            content,
+            category,
+            timestamp: new Date().toLocaleString()
+        });
+        showToast("🚀 Published");
     }
 
-    displayNotices();
+    saveData();
+    resetForm();
+    renderNotices();
 }
 
-updateUI();
+function editNotice(id) {
+    const n = notices.find(n => n.id === id);
+    editId.value = n.id;
+    titleInput.value = n.title;
+    contentInput.value = n.content;
+    categoryInput.value = n.category;
+    cancelBtn.style.display = "block";
+}
+
+function openDeleteModal(id) {
+    deleteId = id;
+    confirmModal.style.display = "flex";
+}
+
+function closeDeleteModal() {
+    confirmModal.style.display = "none";
+    deleteId = null;
+}
+
+confirmDeleteBtn.onclick = () => {
+    notices = notices.filter(n => n.id !== deleteId);
+    saveData();
+    renderNotices();
+    closeDeleteModal();
+    showToast("🗑️ Deleted");
+};
+
+/* ---------- UTIL ---------- */
+function saveData() {
+    localStorage.setItem("secure_notices_db", JSON.stringify(notices));
+}
+
+function resetForm() {
+    editId.value = "";
+    titleInput.value = "";
+    contentInput.value = "";
+    cancelBtn.style.display = "none";
+}
+
+function showToast(msg) {
+    toast.innerText = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 3000);
+}
+
+/* ---------- RENDER ---------- */
+function renderNotices() {
+    noticeList.innerHTML = "";
+
+    const search = searchInput.value.toLowerCase();
+    const filter = filterSelect.value;
+
+    notices
+        .filter(n =>
+            (filter === "all" || n.category === filter) &&
+            (n.title.toLowerCase().includes(search) ||
+             n.content.toLowerCase().includes(search))
+        )
+        .forEach(n => {
+            const div = document.createElement("div");
+            div.className = `notice-card ${n.category}`;
+            div.innerHTML = `
+                <span class="badge badge-${n.category}">${n.category}</span>
+                <h3>${n.title}</h3>
+                <p>${n.content}</p>
+                <div class="card-footer">
+                    <span class="timestamp">${n.timestamp}</span>
+                    ${
+                        currentMode === "admin"
+                            ? `<button onclick="editNotice(${n.id})">Edit</button>
+                               <button onclick="openDeleteModal(${n.id})">Delete</button>`
+                            : ""
+                    }
+                </div>`;
+            noticeList.appendChild(div);
+        });
+}
+
+renderNotices();
