@@ -230,6 +230,8 @@ if (!window.__dnb_initialized) {
     window.resetForm = resetForm;
     window.renderNotices = renderNotices;
 
-    // initial render
+
+
+    // event listeners
     document.addEventListener('DOMContentLoaded', () => renderNotices());
 }
